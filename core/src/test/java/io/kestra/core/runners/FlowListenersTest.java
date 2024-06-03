@@ -69,14 +69,14 @@ abstract public class FlowListenersTest {
         Flow firstUpdated = create(first.getId(), "test2");
 
 
-        flowRepository.create(first, first.generateSource(), pluginDefaultService.injectDefaults(first));
+        flowRepository.create(first, first.generateSource(), pluginDefaultService.injectDefaults(first.withSource(first.generateSource())));
         wait(ref, () -> {
             assertThat(count.get(), is(1));
             assertThat(flowListenersService.flows().size(), is(1));
         });
 
         // create the same id than first, no additional flows
-        first = flowRepository.update(firstUpdated, first, firstUpdated.generateSource(), pluginDefaultService.injectDefaults(firstUpdated));
+        first = flowRepository.update(firstUpdated, first, firstUpdated.generateSource(), pluginDefaultService.injectDefaults(firstUpdated.withSource(firstUpdated.generateSource())));
         wait(ref, () -> {
             assertThat(count.get(), is(1));
             assertThat(flowListenersService.flows().size(), is(1));
@@ -85,7 +85,7 @@ abstract public class FlowListenersTest {
 
         Flow second = create("second_" + IdUtils.create(), "test");
         // create a new one
-        flowRepository.create(second, second.generateSource(), pluginDefaultService.injectDefaults(second));
+        flowRepository.create(second, second.generateSource(), pluginDefaultService.injectDefaults(second.withSource(second.generateSource())));
         wait(ref, () -> {
             assertThat(count.get(), is(2));
             assertThat(flowListenersService.flows().size(), is(2));
@@ -99,14 +99,14 @@ abstract public class FlowListenersTest {
         });
 
         // restore must works
-        flowRepository.create(first, first.generateSource(), pluginDefaultService.injectDefaults(first));
+        flowRepository.create(first, first.generateSource(), pluginDefaultService.injectDefaults(first.withSource(first.generateSource())));
         wait(ref, () -> {
             assertThat(count.get(), is(2));
             assertThat(flowListenersService.flows().size(), is(2));
         });
 
         Flow withTenant = first.toBuilder().tenantId("some-tenant").build();
-        flowRepository.create(withTenant, withTenant.generateSource(), pluginDefaultService.injectDefaults(withTenant));
+        flowRepository.create(withTenant, withTenant.generateSource(), pluginDefaultService.injectDefaults(withTenant.withSource(withTenant.generateSource())));
         wait(ref, () -> {
             assertThat(count.get(), is(3));
             assertThat(flowListenersService.flows().size(), is(3));

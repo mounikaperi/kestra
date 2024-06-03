@@ -7,10 +7,8 @@ import io.kestra.core.exceptions.InternalException;
 import io.kestra.core.metrics.MetricRegistry;
 import io.kestra.core.models.executions.*;
 import io.kestra.core.models.executions.statistics.ExecutionCount;
-import io.kestra.core.models.flows.Concurrency;
+import io.kestra.core.models.flows.*;
 import io.kestra.core.models.flows.Flow;
-import io.kestra.core.models.flows.FlowWithException;
-import io.kestra.core.models.flows.State;
 import io.kestra.core.models.tasks.ExecutableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.models.topologies.FlowTopology;
@@ -356,8 +354,8 @@ public class JdbcExecutor implements ExecutorInterface, Service {
                 Execution execution = pair.getLeft();
                 ExecutorState executorState = pair.getRight();
 
-                final Flow flow = transform(this.flowRepository.findByExecution(execution), execution);
-                Executor executor = new Executor(execution, null).withFlow(flow);
+            final Flow flow = transform(this.flowRepository.findByExecutionWithSource(execution), execution);
+            Executor executor = new Executor(execution, null).withFlow(flow);
 
                 // schedule it for later if needed
                 if (execution.getState().getCurrent() == State.Type.CREATED && execution.getScheduleDate() != null && execution.getScheduleDate().isAfter(Instant.now())) {
@@ -884,14 +882,14 @@ public class JdbcExecutor implements ExecutorInterface, Service {
         }
     }
 
-    private Flow transform(Flow flow, Execution execution) {
+    private Flow transform(FlowWithSource flow, Execution execution) {
         if (templateExecutorInterface.isPresent()) {
             try {
                 flow = Template.injectTemplate(
                     flow,
                     execution,
                     (tenantId, namespace, id) -> templateExecutorInterface.get().findById(tenantId, namespace, id).orElse(null)
-                );
+                ).withSource(flow.getSource());
             } catch (InternalException e) {
                 log.warn("Failed to inject template", e);
             }

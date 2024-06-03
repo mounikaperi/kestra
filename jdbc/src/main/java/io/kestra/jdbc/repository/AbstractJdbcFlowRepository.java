@@ -193,6 +193,48 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
     }
 
     @Override
+    public Optional<FlowWithSource> findByIdWithSourceWithoutAcl(String tenantId, String namespace, String id, Optional<Integer> revision) {
+        return jdbcRepository
+            .getDslContextWrapper()
+            .transactionResult(configuration -> {
+                DSLContext context = DSL.using(configuration);
+                Select<Record2<String, String>> from;
+
+                from = revision.map(integer -> context
+                        .select(
+                            field("source_code", String.class),
+                            field("value", String.class)
+                        )
+                        .from(jdbcRepository.getTable())
+                        .where(this.noAclDefaultFilter(tenantId))
+                        .and(field("namespace").eq(namespace))
+                        .and(field("id", String.class).eq(id))
+                        .and(field("revision", Integer.class).eq(integer)))
+                    .orElseGet(() -> context
+                        .select(
+                            field("source_code", String.class),
+                            field("value", String.class)
+                        )
+                        .from(fromLastRevision(true))
+                        .where(this.noAclDefaultFilter(tenantId))
+                        .and(field("namespace", String.class).eq(namespace))
+                        .and(field("id", String.class).eq(id)));
+                Record2<String, String> fetched = from.fetchAny();
+
+                if (fetched == null) {
+                    return Optional.empty();
+                }
+
+                Flow flow = jdbcRepository.map(fetched);
+                String source = fetched.get("source_code", String.class);
+                if (flow instanceof FlowWithException fwe) {
+                    return Optional.of(fwe.toBuilder().source(source).build());
+                }
+                return Optional.of(FlowWithSource.of(flow, source));
+            });
+    }
+
+    @Override
     public List<FlowWithSource> findRevisions(String tenantId, String namespace, String id) {
          return jdbcRepository
             .getDslContextWrapper()

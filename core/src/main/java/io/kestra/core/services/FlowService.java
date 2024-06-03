@@ -69,9 +69,10 @@ public class FlowService {
     }
 
     public FlowWithSource importFlow(String tenantId, String source, boolean dryRun) {
-        Flow withTenant = yamlFlowParser.parse(source, Flow.class).toBuilder()
+        FlowWithSource withTenant = yamlFlowParser.parse(source, Flow.class).toBuilder()
             .tenantId(tenantId)
-            .build();
+            .build()
+            .withSource(source);
 
         if (flowRepository.isEmpty()) {
             throw NO_REPOSITORY_EXCEPTION;

@@ -19,9 +19,9 @@ import io.kestra.plugin.core.condition.ExpressionCondition;
 import io.kestra.plugin.core.trigger.Schedule;
 import jakarta.inject.Inject;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.junit.annotations.KestraTest;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -52,6 +52,9 @@ class PluginDefaultServiceTest {
 
     @Inject
     private PluginDefaultService pluginDefaultService;
+
+    @Inject
+    private YamlFlowParser yamlFlowParser;
 
     @Test
     void shouldInjectGivenDefaultsIncludingType() {
@@ -150,24 +153,24 @@ class PluginDefaultServiceTest {
 
     @Test
     public void injectFlowAndGlobals() {
-        DefaultTester task = DefaultTester.builder()
-            .id("test")
-            .type(DefaultTester.class.getName())
-            .set(666)
-            .build();
+        String source = """
+            id: default-test
+            namespace: io.kestra.tests
 
-        Flow flow = Flow.builder()
-            .triggers(List.of(
-                DefaultTriggerTester.builder()
-                    .id("trigger")
-                    .type(DefaultTriggerTester.class.getName())
-                    .conditions(List.of(ExpressionCondition.builder()
-                        .type(ExpressionCondition.class.getName())
-                        .build())
-                    )
-                    .build()
-            ))
-            .tasks(Collections.singletonList(task))
+            triggers:
+            - id: trigger
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTriggerTester
+              conditions:
+              - type: io.kestra.plugin.core.condition.ExpressionCondition
+
+            tasks:
+            - id: test
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTester
+              set: 666""";
+
+        FlowWithSource flow = yamlFlowParser.parse(source, Flow.class)
+            .withSource(source)
+            .toBuilder()
             .pluginDefaults(List.of(
                 new PluginDefault(DefaultTester.class.getName(), false, ImmutableMap.of(
                     "value", 1,
@@ -183,7 +186,7 @@ class PluginDefaultServiceTest {
             ))
             .build();
 
-        Flow injected = pluginDefaultService.injectDefaults(flow);
+        FlowWithSource injected = pluginDefaultService.injectDefaults(flow);
 
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getValue(), is(1));
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getSet(), is(666));
@@ -200,14 +203,18 @@ class PluginDefaultServiceTest {
 
     @Test
     public void forced() {
-        DefaultTester task = DefaultTester.builder()
-            .id("test")
-            .type(DefaultTester.class.getName())
-            .set(666)
-            .build();
+        String source = """
+            id: default-test
+            namespace: io.kestra.tests
 
-        Flow flow = Flow.builder()
-            .tasks(Collections.singletonList(task))
+            tasks:
+            - id: test
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTester
+              set: 666""";
+
+        FlowWithSource flow = yamlFlowParser.parse(source, Flow.class)
+            .withSource(source)
+            .toBuilder()
             .pluginDefaults(List.of(
                 new PluginDefault(DefaultTester.class.getName(), true, ImmutableMap.of(
                     "set", 123
@@ -223,31 +230,31 @@ class PluginDefaultServiceTest {
             ))
             .build();
 
-        Flow injected = pluginDefaultService.injectDefaults(flow);
+        FlowWithSource injected = pluginDefaultService.injectDefaults(flow);
 
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getSet(), is(123));
     }
 
     @Test
     public void prefix() {
-        DefaultTester task = DefaultTester.builder()
-            .id("test")
-            .type(DefaultTester.class.getName())
-            .set(666)
-            .build();
+        String source = """
+            id: default-test
+            namespace: io.kestra.tests
 
-        Flow flow = Flow.builder()
-            .triggers(List.of(
-                DefaultTriggerTester.builder()
-                    .id("trigger")
-                    .type(DefaultTriggerTester.class.getName())
-                    .conditions(List.of(ExpressionCondition.builder()
-                        .type(ExpressionCondition.class.getName())
-                        .build())
-                    )
-                    .build()
-            ))
-            .tasks(Collections.singletonList(task))
+            triggers:
+            - id: trigger
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTriggerTester
+              conditions:
+              - type: io.kestra.plugin.core.condition.ExpressionCondition
+
+            tasks:
+            - id: test
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTester
+              set: 666""";
+
+        FlowWithSource flow = yamlFlowParser.parse(source, Flow.class)
+            .withSource(source)
+            .toBuilder()
             .pluginDefaults(List.of(
                 new PluginDefault(DefaultTester.class.getName(), false, ImmutableMap.of(
                     "set", 789
@@ -263,7 +270,7 @@ class PluginDefaultServiceTest {
             ))
             .build();
 
-        Flow injected = pluginDefaultService.injectDefaults(flow);
+        FlowWithSource injected = pluginDefaultService.injectDefaults(flow);
 
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getSet(), is(666));
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getValue(), is(2));
@@ -271,14 +278,18 @@ class PluginDefaultServiceTest {
 
     @Test
     void alias() {
-        DefaultTester task = DefaultTester.builder()
-            .id("test")
-            .type(DefaultTester.class.getName())
-            .set(666)
-            .build();
+        String source = """
+            id: default-test
+            namespace: io.kestra.tests
 
-        Flow flow = Flow.builder()
-            .tasks(Collections.singletonList(task))
+            tasks:
+            - id: test
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTester
+              set: 666""";
+
+        FlowWithSource flow = yamlFlowParser.parse(source, Flow.class)
+            .withSource(source)
+            .toBuilder()
             .pluginDefaults(List.of(
                 new PluginDefault("io.kestra.core.services.DefaultTesterAlias", false, ImmutableMap.of(
                     "value", 1
@@ -286,9 +297,35 @@ class PluginDefaultServiceTest {
             ))
             .build();
 
-        Flow injected = pluginDefaultService.injectDefaults(flow);
+        FlowWithSource injected = pluginDefaultService.injectDefaults(flow);
 
         assertThat(((DefaultTester) injected.getTasks().getFirst()).getValue(), is(1));
+    }
+
+    @Test
+    void defaultOverride() {
+        String source = """
+            id: default-test
+            namespace: io.kestra.tests
+
+            tasks:
+            - id: test
+              type: io.kestra.core.services.PluginDefaultServiceTest$DefaultTester
+              set: 666""";
+
+        FlowWithSource flow = yamlFlowParser.parse(source, Flow.class)
+            .withSource(source)
+            .toBuilder()
+            .pluginDefaults(List.of(
+                new PluginDefault(DefaultTester.class.getName(), false, ImmutableMap.of(
+                    "defaultValue", "overridden"
+                ))
+            ))
+            .build();
+
+        FlowWithSource injected = pluginDefaultService.injectDefaults(flow);
+
+        assertThat(((DefaultTester) injected.getTasks().getFirst()).getDefaultValue(), is("overridden"));
     }
 
     @SuperBuilder
@@ -326,6 +363,9 @@ class PluginDefaultServiceTest {
         private Integer set;
 
         private List<Integer> arrays;
+
+        @Builder.Default
+        private String defaultValue = "default";
 
         @Override
         public VoidOutput run(RunContext runContext) throws Exception {

@@ -102,8 +102,8 @@ public class FlowController {
         @Parameter(description = "The flow revision") @QueryValue Optional<Integer> revision,
         @Parameter(description = "The subflow tasks to display") @Nullable @QueryValue List<String> subflows
     ) throws IllegalVariableEvaluationException {
-        Flow flow = flowRepository
-            .findById(tenantService.resolveTenant(), namespace, id, revision)
+        FlowWithSource flow = flowRepository
+            .findByIdWithSource(tenantService.resolveTenant(), namespace, id, revision)
             .orElse(null);
 
         String flowUid = revision.isEmpty() ? Flow.uidWithoutRevision(tenantService.resolveTenant(), namespace, id) : Flow.uid(tenantService.resolveTenant(), namespace, id, revision);
@@ -130,7 +130,7 @@ public class FlowController {
         @Parameter(description = "The flow") @Body String flow,
         @Parameter(description = "The subflow tasks to display") @Nullable @QueryValue List<String> subflows
     ) throws ConstraintViolationException, IllegalVariableEvaluationException {
-        Flow flowParsed = yamlFlowParser.parse(flow, Flow.class);
+        FlowWithSource flowParsed = yamlFlowParser.parse(flow, Flow.class).withSource(flow);
 
         return graphService.flowGraph(flowParsed, subflows);
     }
@@ -264,7 +264,7 @@ public class FlowController {
     }
 
     protected FlowWithSource doCreate(Flow flow, String source) {
-        return flowRepository.create(flow, source, pluginDefaultService.injectDefaults(flow));
+        return flowRepository.create(flow, source, pluginDefaultService.injectDefaults(flow.withSource(source)));
     }
 
     @ExecuteOn(TaskExecutors.IO)
@@ -381,12 +381,11 @@ public class FlowController {
         // update or create flows
         List<FlowWithSource> updatedOrCreated = flows.stream()
             .map(flowWithSource -> {
-                Flow flow = flowWithSource.toFlow();
-                Optional<Flow> existingFlow = flowRepository.findById(tenantService.resolveTenant(), namespace, flow.getId());
+                Optional<Flow> existingFlow = flowRepository.findById(tenantService.resolveTenant(), namespace, flowWithSource.getId());
                 if (existingFlow.isPresent()) {
-                    return flowRepository.update(flow, existingFlow.get(), flowWithSource.getSource(), pluginDefaultService.injectDefaults(flow));
+                    return flowRepository.update(flowWithSource, existingFlow.get(), flowWithSource.getSource(), pluginDefaultService.injectDefaults(flowWithSource));
                 } else {
-                    return this.doCreate(flow, flowWithSource.getSource());
+                    return this.doCreate(flowWithSource, flowWithSource.getSource());
                 }
             })
             .toList();
@@ -435,7 +434,7 @@ public class FlowController {
     }
 
     protected FlowWithSource update(Flow current, Flow previous, String source) {
-        return flowRepository.update(current, previous, source, pluginDefaultService.injectDefaults(current));
+        return flowRepository.update(current, previous, source, pluginDefaultService.injectDefaults(current.withSource(source)));
     }
 
     /**
@@ -466,7 +465,8 @@ public class FlowController {
         Flow flow = existingFlow.get();
         try {
             Flow newValue = flow.updateTask(taskId, task);
-            return HttpResponse.ok(flowRepository.update(newValue, flow, flow.generateSource(), pluginDefaultService.injectDefaults(newValue)).toFlow());
+            String newSource = newValue.generateSource();
+            return HttpResponse.ok(flowRepository.update(newValue, flow, newSource, pluginDefaultService.injectDefaults(newValue.withSource(newSource))).toFlow());
         } catch (InternalException e) {
             return HttpResponse.status(HttpStatus.NOT_FOUND);
         }
@@ -545,7 +545,7 @@ public class FlowController {
                     validateConstraintViolationBuilder.flow(flowParse.getId());
                     validateConstraintViolationBuilder.namespace(flowParse.getNamespace());
 
-                    modelValidator.validate(pluginDefaultService.injectDefaults(flowParse));
+                    modelValidator.validate(pluginDefaultService.injectDefaults(flowParse.withSource(flow)));
                 } catch (ConstraintViolationException e) {
                     validateConstraintViolationBuilder.constraints(e.getMessage());
                 } catch (RuntimeException re) {

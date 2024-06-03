@@ -64,6 +64,24 @@ public interface FlowRepositoryInterface {
         }
     }
 
+    default FlowWithSource findByExecutionWithSource(Execution execution) {
+        Optional<FlowWithSource> find = this.findByIdWithSource(
+            execution.getTenantId(),
+            execution.getNamespace(),
+            execution.getFlowId(),
+            Optional.of(execution.getFlowRevision())
+        );
+
+        if (find.isEmpty()) {
+            throw new IllegalStateException("Unable to find flow '" + execution.getNamespace() + "." +
+                execution.getFlowId() + "' with revision " + execution.getFlowRevision() + " on execution " +
+                execution.getId()
+            );
+        } else {
+            return find.get();
+        }
+    }
+
     default Optional<Flow> findById(String tenantId, String namespace, String id) {
         return this.findById(tenantId, namespace, id, Optional.empty(), false);
     }
@@ -77,6 +95,8 @@ public interface FlowRepositoryInterface {
     default Optional<FlowWithSource> findByIdWithSource(String tenantId, String namespace, String id) {
         return this.findByIdWithSource(tenantId, namespace, id, Optional.empty(), false);
     }
+
+    Optional<FlowWithSource> findByIdWithSourceWithoutAcl(String tenantId, String namespace, String id, Optional<Integer> revision);
 
     List<FlowWithSource> findRevisions(String tenantId, String namespace, String id);
 
