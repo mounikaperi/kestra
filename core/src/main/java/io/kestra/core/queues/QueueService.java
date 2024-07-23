@@ -26,7 +26,7 @@ public class QueueService {
             return ((WorkerTaskResult) object).getTaskRun().getId();
         } else if (object.getClass() == LogEntry.class) {
             return null;
-        } else if (object.getClass() == Flow.class) {
+        } else if (object instanceof Flow) {
             return ((Flow) object).uid();
         } else if (object.getClass() == Template.class) {
             return ((Template) object).uid();

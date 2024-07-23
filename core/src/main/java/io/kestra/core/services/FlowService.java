@@ -377,6 +377,7 @@ public class FlowService {
                     fixSnakeYaml(entry.getKey()),
                     fixSnakeYaml(entry.getValue())
                 ))
+                .filter(entry -> entry.getValue() != null)
                 .collect(Collectors.toMap(
                     Map.Entry::getKey,
                     Map.Entry::getValue,

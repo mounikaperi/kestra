@@ -2,6 +2,7 @@ package io.kestra.core.services;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.flows.Flow;
 import io.kestra.core.models.flows.FlowWithSource;
 import io.kestra.core.models.hierarchies.*;
 import io.kestra.core.models.tasks.ExecutableTask;
@@ -78,7 +79,7 @@ public class GraphService {
                 return subflowGraphTasks.stream().map(subflowGraphTask -> Map.entry(entry.getKey(), subflowGraphTask));
             });
 
-        Flow finalFlow = flow;
+        FlowWithSource finalFlow = flow;
         subflowToReplaceByParent.map(throwFunction(parentWithSubflowGraphTask -> {
                 SubflowGraphTask subflowGraphTask = parentWithSubflowGraphTask.getValue();
                 Task task = (Task) subflowGraphTask.getTask();
@@ -92,20 +93,20 @@ public class GraphService {
                     throw new IllegalArgumentException("Can't expand subflow task '" + task.getId() + "' because namespace and/or flowId contains dynamic values. This can only be viewed on an execution.");
                 }
 
-                Flow subflow = flowByUid.computeIfAbsent(
+                FlowWithSource subflow = flowByUid.computeIfAbsent(
                     subflowId.flowUid(),
                     uid -> {
-                        Optional<Flow> flowById;
+                        Optional<FlowWithSource> flowById;
                         // Prevent the need for FLOW READ access in case we're looking at an execution graph
                         if (execution != null) {
-                            flowById = flowRepository.findByIdWithoutAcl(
+                            flowById = flowRepository.findByIdWithSourceWithoutAcl(
                                 tenantId,
                                 subflowId.namespace(),
                                 subflowId.flowId(),
                                 subflowId.revision()
                             );
                         } else {
-                            flowById = flowRepository.findById(
+                            flowById = flowRepository.findByIdWithSource(
                                 tenantId,
                                 subflowId.namespace(),
                                 subflowId.flowId(),

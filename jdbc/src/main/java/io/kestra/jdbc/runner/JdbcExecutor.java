@@ -89,7 +89,7 @@ public class JdbcExecutor implements ExecutorInterface, Service {
 
     @Inject
     @Named(QueueFactoryInterface.FLOW_NAMED)
-    private QueueInterface<Flow> flowQueue;
+    private QueueInterface<FlowWithSource> flowQueue;
 
     @Inject
     @Named(QueueFactoryInterface.KILL_NAMED)
@@ -145,7 +145,7 @@ public class JdbcExecutor implements ExecutorInterface, Service {
     @Inject
     private FlowTopologyService flowTopologyService;
 
-    protected List<Flow> allFlows;
+    protected List<FlowWithSource> allFlows;
 
     @Inject
     private WorkerGroupService workerGroupService;
@@ -241,7 +241,7 @@ public class JdbcExecutor implements ExecutorInterface, Service {
         this.receiveCancellations.addFirst(flowQueue.receive(
             FlowTopology.class,
             either -> {
-                Flow flow;
+                FlowWithSource flow;
                 if (either.isRight()) {
                     log.error("Unable to deserialize a flow: {}", either.getRight().getMessage());
                     try {
@@ -263,7 +263,7 @@ public class JdbcExecutor implements ExecutorInterface, Service {
                         flowTopologyService
                             .topology(
                                 flow,
-                                this.allFlows.stream()
+                                this.allFlows.stream().map(flowWithSource -> flowWithSource.toFlow())
                             )
                     )
                         .distinct()
@@ -839,7 +839,7 @@ public class JdbcExecutor implements ExecutorInterface, Service {
             Execution execution = executor.getExecution();
             // handle flow triggers on state change
             if (!execution.getState().getCurrent().equals(executor.getOriginalState())) {
-                flowTriggerService.computeExecutionsFromFlowTriggers(execution, allFlows, Optional.of(multipleConditionStorage))
+                flowTriggerService.computeExecutionsFromFlowTriggers(execution, allFlows.stream().map(flow -> flow.toFlow()).toList(), Optional.of(multipleConditionStorage))
                     .forEach(throwConsumer(executionFromFlowTrigger -> this.executionQueue.emit(executionFromFlowTrigger)));
             }
 

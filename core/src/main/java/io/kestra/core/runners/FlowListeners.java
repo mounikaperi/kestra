@@ -6,7 +6,6 @@ import io.kestra.core.models.flows.FlowWithSource;
 import io.kestra.core.serializers.JacksonMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import io.kestra.core.models.flows.Flow;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.FlowRepositoryInterface;
@@ -42,7 +41,7 @@ public class FlowListeners implements FlowListenersInterface {
         @Named(QueueFactoryInterface.FLOW_NAMED) QueueInterface<FlowWithSource> flowQueue
     ) {
         this.flowQueue = flowQueue;
-        this.flows = flowRepository.findAllForAllTenants();
+        this.flows = flowRepository.findAllWithSourceForAllTenants();
     }
 
     @Override
@@ -97,7 +96,7 @@ public class FlowListeners implements FlowListenersInterface {
         }
     }
 
-    private Optional<FlowWithSource> previous(Flow flow) {
+    private Optional<FlowWithSource> previous(FlowWithSource flow) {
         return flows
             .stream()
             .filter(r -> Objects.equals(r.getTenantId(), flow.getTenantId()) && r.getNamespace().equals(flow.getNamespace()) && r.getId().equals(flow.getId()))

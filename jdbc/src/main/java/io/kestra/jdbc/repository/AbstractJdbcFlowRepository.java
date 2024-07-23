@@ -39,7 +39,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository implements FlowRepositoryInterface {
     private static final Field<String> NAMESPACE_FIELD = field("namespace", String.class);
 
-    private final QueueInterface<Flow> flowQueue;
+    private final QueueInterface<FlowWithSource> flowQueue;
     private final QueueInterface<Trigger> triggerQueue;
     private final ApplicationEventPublisher<CrudEvent<Flow>> eventPublisher;
     private final ModelValidator modelValidator;
@@ -303,30 +303,16 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
     }
 
     @Override
-    public List<FlowWithSource> findAllForAllTenants() {
+    public List<Flow> findAllForAllTenants() {
         return this.jdbcRepository
             .getDslContextWrapper()
             .transactionResult(configuration -> {
-                SelectConditionStep<Record1<Object>> select = DSL
+                var select = DSL
                     .using(configuration)
                     .select(field("value"))
-                    .from(fromLastRevision(true))
-                    .where(this.defaultFilter());
+                    .from(fromLastRevision(true));
 
-                // findAllForAllTenants() is used in the backend, so we want it to work even if messy plugins exist.
-                // That's why we will try to deserialize each flow and log an error but not crash in case of exception.
-                List<FlowWithSource> flows = new ArrayList<>();
-                select.fetch().forEach(
-                    item -> {
-                        try {
-                            FlowWithSource flow = this.jdbcRepository.map(item).withSource(item.get("source_code", String.class));
-                            flows.add(flow);
-                        } catch (Exception e) {
-                            log.error("Unable to load the following flow:\n{}", item.get("value", String.class), e);
-                        }
-                    }
-                );
-                return flows;
+                return this.jdbcRepository.fetch(select);
             });
     }
 
@@ -641,7 +627,7 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
 
         this.jdbcRepository.persist(flow, fields);
 
-        flowQueue.emit(flow);
+        flowQueue.emit(flow.withSource(flowSource));
         if (exists.isPresent()) {
             eventPublisher.publishEvent(new CrudEvent<>(flow, exists.get(), crudEventType));
         } else {
@@ -675,11 +661,12 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
         Flow deleted = flow.toDeleted();
 
         Map<Field<Object>, Object> fields = this.jdbcRepository.persistFields(deleted);
-        fields.put(field("source_code"), JacksonMapper.ofYaml().writeValueAsString(deleted));
+        String flowSource = JacksonMapper.ofYaml().writeValueAsString(deleted);
+        fields.put(field("source_code"), flowSource);
 
         this.jdbcRepository.persist(deleted, fields);
 
-        flowQueue.emit(deleted);
+        flowQueue.emit(deleted.withSource(flowSource));
 
         eventPublisher.publishEvent(new CrudEvent<>(flow, CrudEventType.DELETE));
 

@@ -273,8 +273,8 @@ class FlowGraphTest extends AbstractMemoryRunnerTest {
     }
 
     @Test
-    void dynamicIdSubflow() throws IllegalVariableEvaluationException, TimeoutException, QueueException {
-        Flow flow = this.parse("flows/valids/task-flow-dynamic.yaml").toBuilder().revision(1).build();
+    void dynamicIdSubflow() throws IllegalVariableEvaluationException, TimeoutException, QueueException, IOException {
+        FlowWithSource flow = this.parse("flows/valids/task-flow-dynamic.yaml").toBuilder().revision(1).build();
 
         IllegalArgumentException illegalArgumentException = Assertions.assertThrows(IllegalArgumentException.class, () -> graphService.flowGraph(flow, Collections.singletonList("root.launch")));
         assertThat(illegalArgumentException.getMessage(), is("Can't expand subflow task 'launch' because namespace and/or flowId contains dynamic values. This can only be viewed on an execution."));
@@ -290,7 +290,7 @@ class FlowGraphTest extends AbstractMemoryRunnerTest {
         assertThat(flowGraph.getClusters().size(), is(4));
     }
 
-    private Flow parse(String path) {
+    private FlowWithSource parse(String path) throws IOException {
         URL resource = TestsUtils.class.getClassLoader().getResource(path);
         assert resource != null;
 
