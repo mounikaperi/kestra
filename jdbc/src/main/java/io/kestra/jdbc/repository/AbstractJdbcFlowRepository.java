@@ -303,7 +303,7 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
     }
 
     @Override
-    public List<Flow> findAllForAllTenants() {
+    public List<FlowWithSource> findAllForAllTenants() {
         return this.jdbcRepository
             .getDslContextWrapper()
             .transactionResult(configuration -> {
@@ -315,11 +315,11 @@ public abstract class AbstractJdbcFlowRepository extends AbstractJdbcRepository 
 
                 // findAllForAllTenants() is used in the backend, so we want it to work even if messy plugins exist.
                 // That's why we will try to deserialize each flow and log an error but not crash in case of exception.
-                List<Flow> flows = new ArrayList<>();
+                List<FlowWithSource> flows = new ArrayList<>();
                 select.fetch().forEach(
                     item -> {
                         try {
-                            Flow flow = this.jdbcRepository.map(item);
+                            FlowWithSource flow = this.jdbcRepository.map(item).withSource(item.get("source_code", String.class));
                             flows.add(flow);
                         } catch (Exception e) {
                             log.error("Unable to load the following flow:\n{}", item.get("value", String.class), e);

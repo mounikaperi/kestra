@@ -104,6 +104,8 @@ public interface FlowRepositoryInterface {
 
     List<Flow> findAll(String tenantId);
 
+    List<FlowWithSource> findAllForAllTenants();
+    
     /**
      * Counts the total number of flows.
      *
