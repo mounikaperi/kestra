@@ -716,7 +716,7 @@ public class Worker implements Service, Runnable, AutoCloseable {
             .withAttempts(attempts);
 
         try {
-            taskRun = taskRun.withOutputs(workerThread.getTaskOutput() != null ? workerThread.getTaskOutput().toMap() : ImmutableMap.of());
+            taskRun = taskRun.withOutputs(Variables.of(workerThread.getTaskOutput() != null ? workerThread.getTaskOutput().toMap() : ImmutableMap.of()));
         } catch (Exception e) {
             logger.warn("Unable to save output on taskRun '{}'", taskRun, e);
         }

@@ -4,10 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.exceptions.InternalException;
 import io.kestra.core.models.Label;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.models.executions.ExecutionTrigger;
-import io.kestra.core.models.executions.TaskRun;
-import io.kestra.core.models.executions.TaskRunAttempt;
+import io.kestra.core.models.executions.*;
 import io.kestra.core.models.flows.Flow;
 import io.kestra.core.models.flows.FlowWithException;
 import io.kestra.core.models.flows.State;
@@ -154,7 +151,7 @@ public final class ExecutableUtils {
 
             return previousTaskRun
                 .withIteration(taskRun.getIteration())
-                .withOutputs(outputs)
+                .withOutputs(Variables.of(outputs))
                 .withAttempts(Collections.singletonList(TaskRunAttempt.builder().state(new State().withState(state)).build()))
                 .withState(state);
         }
@@ -162,10 +159,10 @@ public final class ExecutableUtils {
         // else we update the previous taskRun as it's the same taskRun that is still running
         return previousTaskRun
             .withIteration(taskRun.getIteration())
-            .withOutputs(Map.of(
+            .withOutputs(Variables.of(Map.of(
                 TASK_VARIABLE_ITERATIONS, iterations,
                 TASK_VARIABLE_NUMBER_OF_BATCHES, numberOfBatches
-            ));
+            )));
     }
 
     private static State.Type findTerminalState(Map<String, Integer> iterations, boolean allowFailure) {

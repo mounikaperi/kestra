@@ -8,6 +8,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.executions.TaskRun;
 import io.kestra.core.models.executions.TaskRunAttempt;
+import io.kestra.core.models.executions.Variables;
 import io.kestra.core.models.flows.State;
 import io.kestra.core.models.tasks.ExecutableTask;
 import io.kestra.core.models.tasks.Task;
@@ -215,7 +216,7 @@ public class Subflow extends Task implements ExecutableTask<Subflow.Output>, Chi
                 taskRun = taskRun
                     .withState(state)
                     .withAttempts(Collections.singletonList(TaskRunAttempt.builder().state(new State().withState(state)).build()))
-                    .withOutputs(builder.build().toMap());
+                    .withOutputs(Variables.of(builder.build().toMap()));
 
                 return Optional.of(SubflowExecutionResult.builder()
                     .executionId(execution.getId())
@@ -225,7 +226,7 @@ public class Subflow extends Task implements ExecutableTask<Subflow.Output>, Chi
             }
         }
 
-        taskRun = taskRun.withOutputs(builder.build().toMap());
+        taskRun = taskRun.withOutputs(Variables.of(builder.build().toMap()));
 
         State.Type finalState = ExecutableUtils.guessState(execution, this.transmitFailed, this.isAllowFailure());
         if (taskRun.getState().getCurrent() != finalState) {

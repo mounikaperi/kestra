@@ -282,7 +282,7 @@ public class ExecutionService {
                 TaskRun newTaskRun = originalTaskRun.withState(newState);
 
                 if (task instanceof Pause pauseTask && pauseTask.getOnResume() != null) {
-                    newTaskRun = newTaskRun.withOutputs(pauseTask.generateOutputs(onResumeInputs));
+                    newTaskRun = newTaskRun.withOutputs(Variables.of(pauseTask.generateOutputs(onResumeInputs)));
                 }
 
                 if (task instanceof Pause pauseTask && pauseTask.getTasks() == null && newState == State.Type.RUNNING) {
