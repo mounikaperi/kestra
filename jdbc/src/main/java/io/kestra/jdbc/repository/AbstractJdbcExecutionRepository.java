@@ -18,9 +18,10 @@ import io.kestra.core.repositories.ExecutionRepositoryInterface;
 import io.kestra.core.runners.Executor;
 import io.kestra.core.runners.ExecutorState;
 import io.kestra.core.utils.DateUtils;
+import io.kestra.core.utils.ListUtils;
 import io.kestra.core.utils.NamespaceUtils;
 import io.kestra.jdbc.runner.AbstractJdbcExecutorStateStorage;
-import io.kestra.jdbc.runner.JdbcIndexerInterface;
+import io.kestra.jdbc.runner.JdbcQueueIndexerInterface;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.data.model.Pageable;
@@ -57,7 +58,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class AbstractJdbcExecutionRepository extends AbstractJdbcRepository implements ExecutionRepositoryInterface, JdbcIndexerInterface<Execution> {
+public abstract class AbstractJdbcExecutionRepository extends AbstractJdbcRepository implements ExecutionRepositoryInterface, JdbcQueueIndexerInterface<Execution> {
     private static final int FETCH_SIZE = 100;
     private static final Field<String> STATE_CURRENT_FIELD = field("state_current", String.class);
     private static final Field<String> NAMESPACE_FIELD = field("namespace", String.class);
@@ -940,6 +941,15 @@ public abstract class AbstractJdbcExecutionRepository extends AbstractJdbcReposi
         this.jdbcRepository.persist(execution, dslContext, fields);
 
         return execution;
+    }
+
+    @Override
+    public int saveBatch(List<Execution> items) {
+        if (ListUtils.isEmpty(items)) {
+            return 0;
+        }
+
+        return this.jdbcRepository.persistBatch(items);
     }
 
     @Override
